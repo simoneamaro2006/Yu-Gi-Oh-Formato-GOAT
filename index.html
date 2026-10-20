@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yu-Gi-Oh! Goat Format - Web Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0c0c10; color: #f0f0f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; margin: 0; padding: 0; }
+        .table-bg { background: radial-gradient(circle, #144419 0%, #05230a 100%); }
+        .card-slot { border: 2px dashed rgba(255, 255, 255, 0.2); transition: all 0.2s ease; }
+        .card-slot:hover { border-color: rgba(245, 185, 30, 0.8); background-color: rgba(255, 255, 255, 0.05); }
+        .card-img { width: 75px; height: 105px; object-fit: cover; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.4); }
+        .card-db { width: 80px; height: 115px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: transform 0.2s; }
+        .card-db:hover { transform: scale(1.08); z-index: 50; border: 2px solid #f5b91e; }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- MENU PRINCIPALE -->
+    <div id="screen-menu" class="flex flex-col items-center justify-center h-full w-full space-y-6">
+        <h1 class="text-4xl font-extrabold text-amber-400 tracking-wider mb-4">YU-GI-OH! GOAT FORMAT</h1>
+        <div class="flex flex-col space-y-4 w-96">
+            <button onclick="mostraSchermata('campagna')" class="bg-emerald-900 border-2 border-amber-400 text-white py-3 rounded-lg font-bold hover:bg-emerald-800 transition shadow-lg">CAMPAGNA STORICA</button>
+            <button onclick="mostraSchermata('online')" class="bg-blue-900 border-2 border-amber-400 text-white py-3 rounded-lg font-bold hover:bg-blue-800 transition shadow-lg">MULTIPLAYER ONLINE (STANZA)</button>
+            <button onclick="mostraSchermata('deckbuilder')" class="bg-gray-800 border-2 border-white text-white py-3 rounded-lg font-bold hover:bg-gray-700 transition shadow-lg">DECK BUILDER</button>
+        </div>
+    </div>
+
+    <!-- SCHERMATA CAMPAGNA -->
+    <div id="screen-campagna" class="hidden flex flex-col h-full w-full p-6">
+        <div class="flex justify-between items-center mb-6">
+            <button onclick="mostraSchermata('menu')" class="bg-gray-800 border border-white px-4 py-2 rounded font-bold text-sm hover:bg-gray-700">&lt; MENU</button>
+            <h2 class="text-2xl font-bold text-amber-400">CAMPAGNA STORICA DUELLANTI (12 PERSONAGGI)</h2>
+            <div></div>
+        </div>
+        <div id="lista-personaggi" class="grid grid-cols-3 gap-4 overflow-y-auto flex-grow pr-2"></div>
+    </div>
+
+    <!-- SCHERMATA ONLINE -->
+    <div id="screen-online" class="hidden flex flex-col h-full w-full p-6 items-center justify-center">
+        <div class="bg-gray-900 border-2 border-amber-400 p-8 rounded-xl w-[500px] flex flex-col space-y-6 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <button onclick="mostraSchermata('menu')" class="bg-gray-800 border border-white px-3 py-1 rounded text-xs font-bold">&lt; MENU</button>
+                <h2 class="text-xl font-bold text-amber-400">GESTIONE STANZA ONLINE</h2>
+                <div></div>
+            </div>
+            <p class="text-sm text-gray-300 text-center">Inserisci un codice stanza personalizzato (es. <code>DUEL123</code>) per creare o unirti alla lobby:</p>
+            <input type="text" id="input-codice-stanza" placeholder="Codice Stanza..." class="bg-gray-800 border-2 border-gray-600 rounded-lg p-3 text-center text-lg font-bold text-amber-400 focus:border-amber-400 outline-none text-white">
+            <div class="flex space-x-4">
+                <button onclick="avviaStanzaOnline('crea')" class="flex-1 bg-emerald-700 hover:bg-emerald-600 border border-white py-3 rounded-lg font-bold transition text-white">CREA STANZA</button>
+                <button onclick="avviaStanzaOnline('unisci')" class="flex-1 bg-blue-700 hover:bg-blue-600 border border-white py-3 rounded-lg font-bold transition text-white">UNISCITI</button>
+            </div>
+            <p id="stato-online-msg" class="text-amber-300 text-center text-sm font-semibold h-6"></p>
+        </div>
+    </div>
+
+    <!-- SCHERMATA DECK BUILDER -->
+    <div id="screen-deckbuilder" class="hidden flex flex-col h-full w-full p-4">
+        <div class="flex justify-between items-center mb-4">
+            <button onclick="mostraSchermata('menu')" class="bg-gray-800 border border-white px-4 py-2 rounded font-bold text-sm hover:bg-gray-700">&lt; SALVA & MENU</button>
+            <h2 class="text-xl font-bold text-amber-400">DECK BUILDER PROFESSIONALE</h2>
+            <div></div>
+        </div>
+        <div class="flex flex-row h-[calc(100%-60px)] gap-4">
+            <div class="w-1/3 bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col">
+                <input type="text" id="barra-ricerca" oninput="filtraArchivioCarte()" placeholder="🔍 Cerca carta nell'archivio..." class="bg-gray-800 border border-gray-600 rounded p-2 mb-3 text-sm focus:border-amber-400 outline-none text-white">
+                <div id="archivio-carte" class="grid grid-cols-4 gap-2 overflow-y-auto flex-grow pr-1"></div>
+            </div>
+            <div class="w-2/3 flex flex-col gap-4">
+                <div class="h-3/4 bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col">
+                    <h3 id="titolo-main-deck" class="text-sm font-bold text-emerald-400 mb-2">Main Deck (0 Carte)</h3>
+                    <div id="mio-main-deck" class="grid grid-cols-7 gap-2 overflow-y-auto flex-grow"></div>
+                </div>
+                <div class="h-1/4 bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col">
+                    <h3 id="titolo-extra-deck" class="text-sm font-bold text-purple-400 mb-2">Extra Deck (0 Carte)</h3>
+                    <div id="mio-extra-deck" class="flex gap-2 overflow-x-auto flex-grow items-center"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCHERMATA DI GIOCO (PLANCIA) -->
+    <div id="screen-gioco" class="hidden flex h-full w-full table-bg relative">
+        <div class="w-60 bg-gray-900 border-r border-gray-800 p-4 flex flex-col justify-between">
+            <div class="flex flex-col space-y-4">
+                <button onclick="mostraSchermata('menu')" class="bg-red-700 hover:bg-red-600 text-white py-2 rounded font-bold text-xs shadow">ESCI AL MENU</button>
+                <div class="bg-gray-800 p-3 rounded border border-gray-700">
+                    <p id="label-vs" class="text-amber-400 font-bold text-sm">VS: Yugi Muto</p>
+                    <p id="label-lp-opp" class="text-red-400 text-xs mt-1">LP Opp: 8000</p>
+                    <p id="label-lp-tu" class="text-emerald-400 text-xs font-bold mt-1">Tu LP: 8000</p>
+                    <p id="label-fase" class="text-gray-300 text-xs mt-2 italic">Fase: Main Phase 1</p>
+                </div>
+                <button onclick="passaTurno()" class="bg-blue-700 hover:bg-blue-600 text-white py-2 rounded font-bold text-xs shadow">PASSA TURNO</button>
+            </div>
+            <div id="box-anteprima" class="w-full h-64 border-2 border-amber-400 rounded bg-black flex items-center justify-center overflow-hidden">
+                <span class="text-gray-500 text-xs text-center p-2">Passa il mouse su una carta per vederla</span>
+            </div>
+        </div>
+
+        <div class="flex-grow flex flex-col justify-between p-6">
+            <div class="flex flex-col items-center space-y-2">
+                <div class="flex gap-3">
+                    <div id="opp-m-0" class="card-slot card-img rounded bg-black/20 flex items-center justify-center"></div>
+                    <div id="opp-m-1" class="card-slot card-img rounded bg-black/20 flex items-center justify-center"></div>
+                    <div id="opp-m-2" class="card-slot card-img rounded bg-black/20 flex items-center justify-center"></div>
+                    <div id="opp-m-3" class="card-slot card-img rounded bg-black/20 flex items-center justify-center"></div>
+                    <div id="opp-m-4" class="card-slot card-img rounded bg-black/20 flex items-center justify-center"></div>
+                </div>
+            </div>
+
+            <div class="flex flex-col items-center space-y-2">
+                <div class="flex gap-3">
+                    <div id="tu-m-0" onclick="posizionaMostro(0)" class="card-slot card-img rounded bg-black/20 flex items-center justify-center cursor-pointer"></div>
+                    <div id="tu-m-1" onclick="posizionaMostro(1)" class="card-slot card-img rounded bg-black/20 flex items-center justify-center cursor-pointer"></div>
+                    <div id="tu-m-2" onclick="posizionaMostro(2)" class="card-slot card-img rounded bg-black/20 flex items-center justify-center cursor-pointer"></div>
+                    <div id="tu-m-3" onclick="posizionaMostro(3)" class="card-slot card-img rounded bg-black/20 flex items-center justify-center cursor-pointer"></div>
+                    <div id="tu-m-4" onclick="posizionaMostro(4)" class="card-slot card-img rounded bg-black/20 flex items-center justify-center cursor-pointer"></div>
+                </div>
+            </div>
+
+            <div id="mano-giocatore" class="flex justify-center gap-3 h-28 items-center bg-black/30 rounded-xl p-2"></div>
+        </div>
+    </div>
+
+    <script>
+        const archivioBase = [
+            "Blue-Eyes White Dragon", "Dark Magician", "Pot of Greed", "Magician of Faith", 
+            "Heavy Storm", "Mystical Space Typhoon", "Sangan", "Breaker the Magical Warrior", 
+            "Delinquent Duo", "Graceful Charity", "Tribe-Infecting Virus", "Don Zaloog", 
+            "D.D. Assailant", "Mirror Force", "Jinzo", "Snatch Steal", "Premature Burial", 
+            "Call of the Haunted", "Torrential Tribute", "Ring of Destruction", "Scapegoat",
+            "Black Luster Soldier - Envoy of the Beginning", "Chaos Sorcerer", "Book of Moon",
+            "Sakuretsu Armor", "Asura Priest", "Airknight Parshath", "Exiled Force", "Blade Knight",
+            "Thousand-Eyes Restrict", "Dark Balter the Terrible", "Ryu Senshi", "Gatling Dragon"
+        ];
+
+        const personaggiCampagna = [
+            { id: 1, nome: "Yugi Muto", mazzo: "Goat Control / Chaos", diff: "Media" },
+            { id: 2, nome: "Seto Kaiba", mazzo: "Drago Bianco Beatdown", diff: "Avanzata" },
+            { id: 3, nome: "Joey Wheeler", mazzo: "Guerriero / Drago Nero", diff: "Normale" },
+            { id: 4, nome: "Maximillion Pegasus", mazzo: "Mondo Toon", diff: "Difficile" },
+            { id: 5, nome: "Marik Ishtar", mazzo: "Custode della Tomba", diff: "Avanzata" },
+            { id: 6, nome: "Mai Valentine", mazzo: "Arpia / Vento", diff: "Normale" },
+            { id: 7, nome: "Bakura Ryou", mazzo: "Demone / Necrofear", diff: "Difficile" },
+            { id: 8, nome: "Bandit Keith", mazzo: "Macchina / Barrel Dragon", diff: "Normale" },
+            { id: 9, nome: "Ishizu Ishtar", mazzo: "Fata / Controllo", diff: "Difficile" },
+            { id: 10, nome: "Rex Raptor", mazzo: "Dinosauro Beatdown", diff: "Facile" },
+            { id: 11, nome: "Weevil Underwood", mazzo: "Insetto / Brucia-LP", diff: "Facile" },
+            { id: 12, nome: "Mako Tsunami", mazzo: "Acqua / Controllo", diff: "Normale" }
+        ];
+
+        let mioMainDeck = [...archivioBase.slice(0, 20)];
+        let mioExtraDeck = ["Thousand-Eyes Restrict", "Dark Balter the Terrible"];
+        let manoGiocatore = [];
+        let campoMieiMostri = [null, null, null, null, null];
+        let campoOppMostri = [null, null, null, null, null];
+        let cartaSelezionataMano = null;
+        let lpTu = 8000, lpOpp = 8000;
+        let turnoTu = true;
+
+        function getCardImageUrl(nomeCarta) {
+            return `https://images.ygoprodeck.com/images/cards/${encodeURIComponent(nomeCarta)}.jpg`;
+        }
+
+        function mostraSchermata(id) {
+            ['menu', 'campagna', 'online', 'deckbuilder', 'gioco'].forEach(s => {
+                const el = document.getElementById(`screen-${s}`);
+                if(el) el.classList.add('hidden');
+            });
+            const target = document.getElementById(`screen-${id}`);
+            if(target) target.classList.remove('hidden');
+            
+            if (id === 'deckbuilder') aggiornaDeckBuilder();
+            if (id === 'campagna') popolaCampagna();
+        }
+
+        function popolaCampagna() {
+            const container = document.getElementById('lista-personaggi');
+            if(!container) return;
+            container.innerHTML = '';
+            personaggiCampagna.forEach(p => {
+                container.innerHTML += `
+                    <div class="bg-gray-900 border border-amber-400/50 p-4 rounded-xl flex items-center justify-between shadow-md">
+                        <div>
+                            <h4 class="text-amber-400 font-bold text-lg">${p.nome}</h4>
+                            <p class="text-xs text-gray-300">Mazzo: ${p.mazzo}</p>
+                            <p class="text-xs text-emerald-400">Difficoltà: ${p.diff}</p>
+                        </div>
+                        <button onclick="avviaDuelloCampagna('${p.nome}')" class="bg-emerald-700 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition shadow">SFIDA</button>
+                    </div>
+                `;
+            });
+        }
+
+        function avviaDuelloCampagna(nomeAvv) {
+            document.getElementById('label-vs').innerText = `VS: ${nomeAvv}`;
+            inizializzaPartita();
+            mostraSchermata('gioco');
+        }
+
+        function avviaStanzaOnline(azione) {
+            const inputEl = document.getElementById('input-codice-stanza');
+            const msg = document.getElementById('stato-online-msg');
+            if(!inputEl || !msg) return;
+            const codice = inputEl.value.trim();
+            if(!codice) {
+                msg.innerText = "Inserisci prima un codice stanza valido!";
+                return;
+            }
+            msg.innerText = azione === 'crea' ? `Stanza [${codice}] creata. In attesa di un avversario...` : `Connessione alla stanza [${codice}] riuscita!`;
+            setTimeout(() => {
+                document.getElementById('label-vs').innerText = `Online: ${codice}`;
+                inizializzaPartita();
+                mostraSchermata('gioco');
+            }, 1200);
+        }
+
+        function inizializzaPartita() {
+            lpTu = 8000;
+            lpOpp = 8000;
+            turnoTu = true;
+            campoMieiMostri = [null, null, null, null, null];
+            campoOppMostri = [null, null, null, null, null];
+            manoGiocatore = mioMainDeck.slice(0, 5);
+            aggiornaPlancia();
+        }
+
+        function aggiornaPlancia() {
+            document.getElementById('label-lp-tu').innerText = `Tu LP: ${lpTu}`;
+            document.getElementById('label-lp-opp').innerText = `LP Opp: ${lpOpp}`;
+            
+            const manoDiv = document.getElementById('mano-giocatore');
+            manoDiv.innerHTML = '';
+            manoGiocatore.forEach((carta, idx) => {
+                manoDiv.innerHTML += `
+                    <img src="${getCardImageUrl(carta)}" class="card-img cursor-pointer ${cartaSelezionataMano === idx ? 'border-4 border-amber-400' : ''}" 
+                         onclick="selezionaCartaMano(${idx})" 
+                         onmouseover="mostraAnteprima('${carta}')" alt="${carta}">
+                `;
+            });
+
+            for(let i=0; i<5; i++) {
+                const slot = document.getElementById(`tu-m-${i}`);
+                if(campoMieiMostri[i]) {
+                    slot.innerHTML = `<img src="${getCardImageUrl(campoMieiMostri[i])}" class="card-img" onmouseover="mostraAnteprima('${campoMieiMostri[i]}')">`;
+                } else {
+                    slot.innerHTML = '';
+                }
+            }
+        }
+
+        function selezionaCartaMano(idx) {
+            cartaSelezionataMano = idx;
+            aggiornaPlancia();
+        }
+
+        function posizionaMostro(slotIdx) {
+            if(cartaSelezionataMano !== null && campoMieiMostri[slotIdx] === null) {
+                const carta = manoGiocatore.splice(cartaSelezionataMano, 1)[0];
+                campoMieiMostri[slotIdx] = carta;
+                cartaSelezionataMano = null;
+                aggiornaPlancia();
+            }
+        }
+
+        function mostraAnteprima(carta) {
+            document.getElementById('box-anteprima').innerHTML = `<img src="${getCardImageUrl(carta)}" class="h-full object-contain rounded">`;
+        }
+
+        function passaTurno() {
+            turnoTu = !turnoTu;
+            document.getElementById('label-fase').innerText = turnoTu ? "Tuo Turno" : "Turno Avversario";
+        }
+
+        function aggiornaDeckBuilder() {
+            const archDiv = document.getElementById('archivio-carte');
+            if(!archDiv) return;
+            archDiv.innerHTML = '';
+            archivioBase.forEach(c => {
+                archDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="aggiungiAlMazzo('${c}')" title="${c}">`;
+            });
+            renderMieiMazzi();
+        }
+
+        function filtraArchivioCarte() {
+            const barra = document.getElementById('barra-ricerca');
+            const archDiv = document.getElementById('archivio-carte');
+            if(!barra || !archDiv) return;
+            const filtro = barra.value.toLowerCase();
+            archDiv.innerHTML = '';
+            archivioBase.filter(c => c.toLowerCase().includes(filtro)).forEach(c => {
+                archDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="aggiungiAlMazzo('${c}')" title="${c}">`;
+            });
+        }
+
+        function aggiungiAlMazzo(c) {
+            if(c.includes("Restrict") || c.includes("Balter") || c.includes("Senshi") || c.includes("Dragon")) {
+                if(mioExtraDeck.length < 15) mioExtraDeck.push(c);
+            } else {
+                if(mioMainDeck.length < 60) mioMainDeck.push(c);
+            }
+            renderMieiMazzi();
+        }
+
+        function renderMieiMazzi() {
+            const titMain = document.getElementById('titolo-main-deck');
+            const mainDiv = document.getElementById('mio-main-deck');
+            const titExtra = document.getElementById('titolo-extra-deck');
+            const extraDiv = document.getElementById('mio-extra-deck');
+
+            if(titMain) titMain.innerText = `Main Deck (${mioMainDeck.length} Carte)`;
+            if(mainDiv) {
+                mainDiv.innerHTML = '';
+                mioMainDeck.forEach((c, idx) => {
+                    mainDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="rimuoviDalMazzo('main', ${idx})" title="Rimuovi">`;
+                });
+            }
+
+            if(titExtra) titExtra.innerText = `Extra Deck (${mioExtraDeck.length} Carte)`;
+            if(extraDiv) {
+                extraDiv.innerHTML = '';
+                mioExtraDeck.forEach((c, idx) => {
+                    extraDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="rimuoviDalMazzo('extra', ${idx})" title="Rimuovi">`;
+                });
+            }
+        }
+
+        function rimuoviDalMazzo(tipo, idx) {
+            if(tipo === 'main') mioMainDeck.splice(idx, 1);
+            else mioExtraDeck.splice(idx, 1);
+            renderMieiMazzi();
+        }
+    </script>
+</body>
+</html>
