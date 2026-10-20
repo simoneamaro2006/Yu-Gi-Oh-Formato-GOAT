@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yu-Gi-Oh! Goat Format - Full Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { background-color: #0c0c10; color: #f0f0f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; margin: 0; padding: 0; }
+        .table-bg { background: radial-gradient(circle, #123d16 0%, #051a09 100%); }
+        .card-slot { border: 2px dashed rgba(255, 255, 255, 0.25); transition: all 0.2s; position: relative; width: 68px; height: 96px; border-radius: 4px; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.3); }
+        .card-slot:hover { border-color: #f5b91e; background-color: rgba(255, 255, 255, 0.08); }
+        .card-img { width: 100%; height: 100%; object-fit: cover; border-radius: 3px; box-shadow: 0 2px 5px rgba(0,0,0,0.6); }
+        .card-db { width: 75px; height: 108px; object-fit: cover; border-radius: 4px; cursor: pointer; transition: transform 0.15s; }
+        .card-db:hover { transform: scale(1.08); border: 2px solid #f5b91e; }
+        .zone-label { font-size: 9px; font-weight: bold; color: rgba(255,255,255,0.4); text-transform: uppercase; position: absolute; }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- MENU PRINCIPALE -->
+    <div id="screen-menu" class="flex flex-col items-center justify-center h-full w-full space-y-6">
+        <h1 class="text-4xl font-extrabold text-amber-400 tracking-wider mb-2">YU-GI-OH! GOAT FORMAT</h1>
+        <p class="text-gray-400 text-sm mb-4">Edizione Completa Online P2P</p>
+        <div class="flex flex-col space-y-4 w-96">
+            <button onclick="mostraSchermata('online')" class="bg-blue-900 border-2 border-amber-400 text-white py-3 rounded-lg font-bold hover:bg-blue-800 transition shadow-lg">GIOCA ONLINE</button>
+            <button onclick="mostraSchermata('deckbuilder')" class="bg-gray-800 border-2 border-white text-white py-3 rounded-lg font-bold hover:bg-gray-700 transition shadow-lg">DECK BUILDER</button>
+        </div>
+    </div>
+
+    <!-- LOBBY MULTIPLAYER -->
+    <div id="screen-online" class="hidden flex flex-col h-full w-full p-6 items-center justify-center">
+        <div class="bg-gray-900 border-2 border-amber-400 p-8 rounded-xl w-[480px] flex flex-col space-y-6 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <button onclick="mostraSchermata('menu')" class="bg-gray-800 border border-white px-3 py-1 rounded text-xs font-bold text-white">&lt; MENU</button>
+                <h2 class="text-xl font-bold text-amber-400">LOBBY MULTIPLAYER</h2>
+                <div></div>
+            </div>
+            <div class="flex flex-col space-y-3">
+                <div class="flex space-x-2">
+                    <input type="text" id="input-codice-stanza" placeholder="Codice Stanza..." class="flex-1 bg-gray-800 border-2 border-gray-600 rounded-lg p-3 text-center text-lg font-bold text-amber-400 focus:border-amber-400 outline-none text-white">
+                    <button onclick="generaMioCodice()" class="bg-amber-600 hover:bg-amber-500 px-4 rounded-lg font-bold text-xs text-white">GENERA</button>
+                </div>
+                <div class="flex space-x-4 mt-2">
+                    <button onclick="creaStanzaOnline()" class="flex-1 bg-emerald-700 hover:bg-emerald-600 border border-white py-3 rounded-lg font-bold text-white">CREA STANZA</button>
+                    <button onclick="unisciStanzaOnline()" class="flex-1 bg-blue-700 hover:bg-blue-600 border border-white py-3 rounded-lg font-bold text-white">UNISCITI</button>
+                </div>
+            </div>
+            <p id="stato-online-msg" class="text-amber-300 text-center text-sm font-semibold h-6"></p>
+        </div>
+    </div>
+
+    <!-- DECK BUILDER -->
+    <div id="screen-deckbuilder" class="hidden flex flex-col h-full w-full p-4">
+        <div class="flex justify-between items-center mb-4">
+            <button onclick="mostraSchermata('menu')" class="bg-gray-800 border border-white px-4 py-2 rounded font-bold text-sm text-white">&lt; SALVA & MENU</button>
+            <h2 class="text-xl font-bold text-amber-400">DECK BUILDER</h2>
+            <div></div>
+        </div>
+        <div class="flex flex-row h-[calc(100%-60px)] gap-4">
+            <div class="w-1/3 bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col">
+                <input type="text" id="barra-ricerca" oninput="filtraArchivioCarte()" placeholder="🔍 Cerca carta..." class="bg-gray-800 border border-gray-600 rounded p-2 mb-3 text-sm focus:border-amber-400 outline-none text-white">
+                <div id="archivio-carte" class="grid grid-cols-3 gap-2 overflow-y-auto flex-grow pr-1"></div>
+            </div>
+            <div class="w-2/3 flex flex-col gap-4">
+                <div class="h-2/3 bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col">
+                    <h3 id="titolo-main-deck" class="text-sm font-bold text-emerald-400 mb-2">Main Deck (0)</h3>
+                    <div id="mio-main-deck" class="grid grid-cols-8 gap-2 overflow-y-auto flex-grow"></div>
+                </div>
+                <div class="h-1/3 bg-gray-900 border border-gray-700 rounded-lg p-4 flex flex-col">
+                    <h3 id="titolo-extra-deck" class="text-sm font-bold text-purple-400 mb-2">Extra Deck (0)</h3>
+                    <div id="mio-extra-deck" class="flex gap-2 overflow-x-auto flex-grow items-center"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PLANCIA DI GIOCO COMPLETA REGOLAMENTARE -->
+    <div id="screen-gioco" class="hidden flex h-full w-full table-bg relative">
+        
+        <!-- SIDEBAR INFO & ANTEPRIMA -->
+        <div class="w-56 bg-gray-900/90 border-r border-gray-800 p-3 flex flex-col justify-between z-10">
+            <div class="flex flex-col space-y-3">
+                <button onclick="mostraSchermata('menu')" class="bg-red-800 hover:bg-red-700 text-white py-1.5 rounded font-bold text-xs">ESCI AL MENU</button>
+                <div class="bg-gray-800 p-2.5 rounded border border-gray-700 space-y-1">
+                    <p id="label-vs" class="text-amber-400 font-bold text-xs truncate">VS: Avversario</p>
+                    <p id="label-lp-opp" class="text-red-400 text-xs font-bold">LP Avv: 8000</p>
+                    <p id="label-lp-tu" class="text-emerald-400 text-xs font-bold">Tu LP: 8000</p>
+                    <p id="label-fase" class="text-gray-300 text-[10px] italic">Stato: In Attesa</p>
+                </div>
+                <button onclick="pescaCarta()" class="bg-amber-600 hover:bg-amber-500 text-white py-1.5 rounded font-bold text-xs">PESCA CARTA</button>
+                <button onclick="passaTurno()" class="bg-blue-700 hover:bg-blue-600 text-white py-1.5 rounded font-bold text-xs">PASSA TURNO</button>
+            </div>
+
+            <!-- Anteprima Carta In grandezza naturale -->
+            <div id="box-anteprima" class="w-full h-64 border border-amber-400/50 rounded bg-black/60 flex items-center justify-center overflow-hidden">
+                <span class="text-gray-500 text-[11px] text-center p-2">Passa sopra una carta per vederla</span>
+            </div>
+        </div>
+
+        <!-- CAMPO DI GIOCO REGOLAMENTARE -->
+        <div class="flex-grow flex flex-col justify-between p-3 relative overflow-hidden">
+            
+            <!-- CAMPO AVVERSARIO -->
+            <div class="flex flex-col items-center space-y-2">
+                <!-- Magie / Trappole Avversario & Zone laterali -->
+                <div class="flex gap-2 items-center">
+                    <div id="opp-field" class="card-slot"><span class="zone-label">Campo</span></div>
+                    <div id="opp-st-0" class="card-slot"></div>
+                    <div id="opp-st-1" class="card-slot"></div>
+                    <div id="opp-st-2" class="card-slot"></div>
+                    <div id="opp-st-3" class="card-slot"></div>
+                    <div id="opp-st-4" class="card-slot"></div>
+                    <div id="opp-gy" class="card-slot"><span class="zone-label">Cimitero</span></div>
+                </div>
+                <!-- Mostri Avversario & Extra/Deck/Banish -->
+                <div class="flex gap-2 items-center">
+                    <div id="opp-extra" class="card-slot"><span class="zone-label">Extra</span></div>
+                    <div id="opp-m-0" class="card-slot"></div>
+                    <div id="opp-m-1" class="card-slot"></div>
+                    <div id="opp-m-2" class="card-slot"></div>
+                    <div id="opp-m-3" class="card-slot"></div>
+                    <div id="opp-m-4" class="card-slot"></div>
+                    <div id="opp-deck" class="card-slot bg-amber-900/30"><span class="zone-label">Deck</span></div>
+                </div>
+            </div>
+
+            <div class="w-full border-t border-white/10 my-1"></div>
+
+            <!-- CAMPO GIOCATORE -->
+            <div class="flex flex-col items-center space-y-2">
+                <!-- Mostri Giocatore & Strutture -->
+                <div class="flex gap-2 items-center">
+                    <div id="tu-extra" class="card-slot"><span class="zone-label">Extra</span></div>
+                    <div id="tu-m-0" onclick="posizionaInSlot('monster', 0)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-m-1" onclick="posizionaInSlot('monster', 1)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-m-2" onclick="posizionaInSlot('monster', 2)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-m-3" onclick="posizionaInSlot('monster', 3)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-m-4" onclick="posizionaInSlot('monster', 4)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-deck" class="card-slot bg-amber-900/40"><span class="zone-label">Deck</span></div>
+                </div>
+                <!-- Magie / Trappole Giocatore & Zone laterali -->
+                <div class="flex gap-2 items-center">
+                    <div id="tu-field" class="card-slot cursor-pointer"><span class="zone-label">Campo</span></div>
+                    <div id="tu-st-0" onclick="posizionaInSlot('st', 0)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-st-1" onclick="posizionaInSlot('st', 1)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-st-2" onclick="posizionaInSlot('st', 2)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-st-3" onclick="posizionaInSlot('st', 3)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-st-4" onclick="posizionaInSlot('st', 4)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-gy" class="card-slot"><span class="zone-label">Cimitero</span></div>
+                </div>
+            </div>
+
+            <!-- MANO DEL GIOCATORE -->
+            <div class="flex flex-col items-center">
+                <p class="text-[10px] text-gray-400 mb-1 font-bold">LA TUA MANO</p>
+                <div id="mano-giocatore" class="flex justify-center gap-2 h-24 items-center bg-black/40 rounded-xl px-4 py-1 border border-white/10 min-w-[500px]"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const archivioBase = [
+            "Blue-Eyes White Dragon", "Dark Magician", "Pot of Greed", "Magician of Faith", 
+            "Heavy Storm", "Mystical Space Typhoon", "Sangan", "Breaker the Magical Warrior", 
+            "Delinquent Duo", "Graceful Charity", "Tribe-Infecting Virus", "Don Zaloog", 
+            "D.D. Assailant", "Mirror Force", "Jinzo", "Snatch Steal", "Premature Burial", 
+            "Call of the Haunted", "Torrential Tribute", "Ring of Destruction", "Scapegoat",
+            "Black Luster Soldier - Envoy of the Beginning", "Chaos Sorcerer", "Book of Moon",
+            "Sakuretsu Armor", "Asura Priest", "Airknight Parshath", "Exiled Force", "Blade Knight",
+            "Thousand-Eyes Restrict", "Dark Balter the Terrible", "Ryu Senshi", "Gatling Dragon"
+        ];
+
+        let mioMainDeck = [...archivioBase.slice(0, 25)];
+        let mioExtraDeck = ["Thousand-Eyes Restrict", "Dark Balter the Terrible"];
+        let mioCimitero = [];
+        let manoGiocatore = [];
+        
+        let campoMieiMostri = [null, null, null, null, null];
+        let campoMieST = [null, null, null, null, null];
+        let campoOppMostri = [null, null, null, null, null];
+        let campoOppST = [null, null, null, null, null];
+        
+        let cartaSelezionataMano = null;
+        let lpTu = 8000, lpOpp = 8000;
+
+        let peer = null;
+        let conn = null;
+
+        function getCardImageUrl(nomeCarta) {
+            return `https://images.ygoprodeck.com/images/cards/${encodeURIComponent(nomeCarta)}.jpg`;
+        }
+
+        function mostraSchermata(id) {
+            ['menu', 'online', 'deckbuilder', 'gioco'].forEach(s => {
+                const el = document.getElementById(`screen-${s}`);
+                if(el) el.classList.add('hidden');
+            });
+            document.getElementById(`screen-${id}`).classList.remove('hidden');
+            if (id === 'deckbuilder') aggiornaDeckBuilder();
+        }
+
+        function generaMioCodice() {
+            document.getElementById('input-codice-stanza').value = "GOAT-" + Math.floor(1000 + Math.random() * 9000);
+        }
+
+        function inizializzaPeer(customId, callback) {
+            if (peer) peer.destroy();
+            peer = new Peer(customId);
+            peer.on('open', (id) => { if(callback) callback(id); });
+            peer.on('error', (err) => { document.getElementById('stato-online-msg').innerText = "Errore: " + err.type; });
+        }
+
+        function creaStanzaOnline() {
+            const codice = document.getElementById('input-codice-stanza').value.trim();
+            if(!codice) return;
+            inizializzaPeer(codice, (id) => {
+                document.getElementById('stato-online-msg').innerText = `Stanza [${id}] creata! In attesa...`;
+                peer.on('connection', (connection) => {
+                    conn = connection;
+                    configuraConnessione();
+                    avviaGioco();
+                });
+            });
+        }
+
+        function unisciStanzaOnline() {
+            const codice = document.getElementById('input-codice-stanza').value.trim();
+            if(!codice) return;
+            inizializzaPeer(null, () => {
+                conn = peer.connect(codice);
+                configuraConnessione();
+                conn.on('open', () => { avviaGioco(); });
+            });
+        }
+
+        function configuraConnessione() {
+            conn.on('data', (data) => {
+                if(data.tipo === 'GIOCA_CARTA') {
+                    if(data.zona === 'monster') campoOppMostri[data.slot] = data.carta;
+                    if(data.zona === 'st') campoOppST[data.slot] = data.carta;
+                    aggiornaPlancia();
+                }
+            });
+        }
+
+        function avviaGioco() {
+            lpTu = 8000; lpOpp = 8000;
+            campoMieiMostri = [null, null, null, null, null];
+            campoMieST = [null, null, null, null, null];
+            campoOppMostri = [null, null, null, null, null];
+            campoOppST = [null, null, null, null, null];
+            manoGiocatore = mioMainDeck.slice(0, 5);
+            mostraSchermata('gioco');
+            aggiornaPlancia();
+        }
+
+        function pescaCarta() {
+            if(mioMainDeck.length > 0) {
+                manoGiocatore.push(mioMainDeck.pop());
+                aggiornaPlancia();
+            }
+        }
+
+        function aggiornaPlancia() {
+            document.getElementById('label-lp-tu').innerText = `Tu LP: ${lpTu}`;
+            document.getElementById('label-lp-opp').innerText = `LP Avv: ${lpOpp}`;
+            document.getElementById('tu-deck').innerHTML = `<span class="zone-label">Deck (${mioMainDeck.length})</span>`;
+            document.getElementById('tu-extra').innerHTML = `<span class="zone-label">Extra (${mioExtraDeck.length})</span>`;
+            document.getElementById('tu-gy').innerHTML = `<span class="zone-label">GY (${mioCimitero.length})</span>`;
+
+            // Render Mano
+            const manoDiv = document.getElementById('mano-giocatore');
+            manoDiv.innerHTML = '';
+            manoGiocatore.forEach((carta, idx) => {
+                manoDiv.innerHTML += `
+                    <img src="${getCardImageUrl(carta)}" class="h-20 w-14 object-cover rounded cursor-pointer ${cartaSelezionataMano === idx ? 'ring-4 ring-amber-400' : ''}" 
+                         onclick="selezionaCartaMano(${idx})" onmouseover="mostraAnteprima('${carta}')">
+                `;
+            });
+
+            // Render Slot Tuoi Mostri e Magie
+            for(let i=0; i<5; i++) {
+                renderSlot(`tu-m-${i}`, campoMieiMostri[i]);
+                renderSlot(`tu-st-${i}`, campoMieST[i]);
+                renderSlot(`opp-m-${i}`, campoOppMostri[i]);
+                renderSlot(`opp-st-${i}`, campoOppST[i]);
+            }
+        }
+
+        function renderSlot(elementId, carta) {
+            const slot = document.getElementById(elementId);
+            if(carta) {
+                slot.innerHTML = `<img src="${getCardImageUrl(carta)}" class="card-img" onmouseover="mostraAnteprima('${carta}')">`;
+            } else {
+                if(!slot.querySelector('.zone-label')) slot.innerHTML = '';
+            }
+        }
+
+        function selezionaCartaMano(idx) {
+            cartaSelezionataMano = idx;
+            aggiornaPlancia();
+        }
+
+        function posizionaInSlot(zona, slotIdx) {
+            if(cartaSelezionataMano === null) return;
+            const carta = manoGiocatore[cartaSelezionataMano];
+
+            if(zona === 'monster' && campoMieiMostri[slotIdx] === null) {
+                campoMieiMostri[slotIdx] = carta;
+            } else if(zona === 'st' && campoMieST[slotIdx] === null) {
+                campoMieST[slotIdx] = carta;
+            } else {
+                return;
+            }
+
+            manoGiocatore.splice(cartaSelezionataMano, 1);
+            cartaSelezionataMano = null;
+            aggiornaPlancia();
+
+            if(conn && conn.open) {
+                conn.send({ tipo: 'GIOCA_CARTA', zona: zona, slot: slotIdx, carta: carta });
+            }
+        }
+
+        function mostraAnteprima(carta) {
+            document.getElementById('box-anteprima').innerHTML = `<img src="${getCardImageUrl(carta)}" class="h-full object-contain">`;
+        }
+
+        function passaTurno() {
+            document.getElementById('label-fase').innerText = "Turno completato";
+        }
+
+        function aggiornaDeckBuilder() {
+            const archDiv = document.getElementById('archivio-carte');
+            archDiv.innerHTML = '';
+            archivioBase.forEach(c => {
+                archDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="aggiungiAlMazzo('${c}')" title="${c}">`;
+            });
+            renderMieiMazzi();
+        }
+
+        function filtraArchivioCarte() {
+            const filtro = document.getElementById('barra-ricerca').value.toLowerCase();
+            const archDiv = document.getElementById('archivio-carte');
+            archDiv.innerHTML = '';
+            archivioBase.filter(c => c.toLowerCase().includes(filtro)).forEach(c => {
+                archDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="aggiungiAlMazzo('${c}')" title="${c}">`;
+            });
+        }
+
+        function aggiungiAlMazzo(c) {
+            if(c.includes("Restrict") || c.includes("Balter") || c.includes("Senshi") || c.includes("Dragon")) {
+                if(mioExtraDeck.length < 15) mioExtraDeck.push(c);
+            } else {
+                if(mioMainDeck.length < 60) mioMainDeck.push(c);
+            }
+            renderMieiMazzi();
+        }
+
+        function renderMieiMazzi() {
+            document.getElementById('titolo-main-deck').innerText = `Main Deck (${mioMainDeck.length})`;
+            const mainDiv = document.getElementById('mio-main-deck');
+            mainDiv.innerHTML = '';
+            mioMainDeck.forEach((c, idx) => {
+                mainDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="rimuoviDalMazzo('main', ${idx})">`;
+            });
+
+            document.getElementById('titolo-extra-deck').innerText = `Extra Deck (${mioExtraDeck.length})`;
+            const extraDiv = document.getElementById('mio-extra-deck');
+            extraDiv.innerHTML = '';
+            mioExtraDeck.forEach((c, idx) => {
+                extraDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="rimuoviDalMazzo('extra', ${idx})">`;
+            });
+        }
+
+        function rimuoviDalMazzo(tipo, idx) {
+            if(tipo === 'main') mioMainDeck.splice(idx, 1);
+            else mioExtraDeck.splice(idx, 1);
+            renderMieiMazzi();
+        }
+    </script>
+</body>
+</html>
