@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yu-Gi-Oh! Goat Format - Online Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { background-color: #0c0c10; color: #f0f0f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; margin: 0; padding: 0; overflow: hidden; }
+        .table-bg { background: radial-gradient(circle, #0e4419 0%, #05230a 100%); }
+        .card-slot { border: 2px dashed rgba(245, 185, 30, 0.3); transition: all 0.2s; position: relative; width: 75px; height: 105px; border-radius: 5px; display: flex; align-items: center; justify-content: center; background-color: rgba(0,0,0,0.4); }
+        .card-slot:hover { border-color: #f5b91e; background-color: rgba(255, 255, 255, 0.1); }
+        .card-img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.8); cursor: pointer; }
+        .card-db { width: 80px; height: 115px; object-fit: cover; border-radius: 5px; cursor: pointer; transition: transform 0.15s, border-color 0.15s; border: 2px solid transparent; }
+        .card-db:hover { transform: scale(1.08); border-color: #f5b91e; box-shadow: 0 0 10px rgba(245, 185, 30, 0.5); }
+        .zone-label { font-size: 10px; font-weight: bold; color: rgba(240,240,245,0.5); text-transform: uppercase; position: absolute; pointer-events: none; text-align: center; }
+        .btn-gold { background-color: #05230a; border: 2px solid #f5b91e; color: #f0f0f5; font-weight: bold; transition: all 0.2s; }
+        .btn-gold:hover { background-color: #f5b91e; color: #0c0c10; box-shadow: 0 0 12px rgba(245, 185, 30, 0.6); }
+        /* Scrollbar personalizzata per il Deck Builder */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #16181e; }
+        ::-webkit-scrollbar-thumb { background: #f5b91e; border-radius: 4px; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col">
+
+    <!-- 1. MENU PRINCIPALE -->
+    <div id="screen-menu" class="flex flex-col items-center justify-center h-full w-full space-y-6 bg-[#0c0c10]">
+        <h1 class="text-5xl font-black text-[#f5b91e] tracking-widest mb-2 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)]">YU-GI-OH! GOAT FORMAT</h1>
+        <p class="text-gray-400 text-sm font-semibold mb-6">Edizione Web Online &amp; Campagna Storica</p>
+        <div class="flex flex-col space-y-4 w-[450px]">
+            <button onclick="mostraSchermata('campagna')" class="btn-gold py-4 rounded-xl text-lg shadow-lg">MODALITÀ CAMPAGNA STORICA</button>
+            <button onclick="avviaGiocoLocale()" class="btn-gold py-4 rounded-xl text-lg shadow-lg">DUELLO LOCALE (2 GIOCATORI)</button>
+            <button onclick="mostraSchermata('online')" class="btn-gold py-4 rounded-xl text-lg shadow-lg">MODALITÀ ONLINE (CODICE STANZA)</button>
+            <button onclick="mostraSchermata('deckbuilder')" class="btn-gold py-4 rounded-xl text-lg shadow-lg">DECK BUILDER PROFESSIONALE</button>
+        </div>
+    </div>
+
+    <!-- 2. CAMPAGNA STORICA -->
+    <div id="screen-campagna" class="hidden flex flex-col h-full w-full bg-[#0c0c10] p-6">
+        <div class="flex justify-between items-center mb-6 border-b border-gray-800 pb-4">
+            <button onclick="mostraSchermata('menu')" class="bg-[#16181e] border-2 border-white text-white px-5 py-2 rounded-lg font-bold text-sm hover:bg-gray-800 transition">&lt; MENU</button>
+            <h2 class="text-2xl font-bold text-[#f5b91e]">CAMPAGNA STORICA DUELLANTI (GOAT 2005)</h2>
+            <div class="w-24"></div>
+        </div>
+        <div id="lista-campagna" class="flex-grow overflow-y-auto space-y-3 pr-2">
+            <!-- I duellanti verranno inseriti qui da JS -->
+        </div>
+    </div>
+
+    <!-- 3. MULTIPLAYER ONLINE -->
+    <div id="screen-online" class="hidden flex flex-col h-full w-full p-6 items-center justify-center bg-[#0c0c10]">
+        <div class="bg-[#16181e] border-2 border-[#f5b91e] p-8 rounded-2xl w-[500px] flex flex-col space-y-6 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <button onclick="mostraSchermata('menu')" class="bg-gray-800 border border-white px-4 py-1.5 rounded-lg text-xs font-bold text-white">&lt; MENU</button>
+                <h2 class="text-xl font-bold text-[#f5b91e]">MULTIPLAYER ONLINE</h2>
+                <div></div>
+            </div>
+            <p class="text-gray-300 text-xs text-center">Digita un codice stanza (es. DUEL123) per creare o unirti alla partita:</p>
+            <div class="flex flex-col space-y-4">
+                <div class="flex space-x-2">
+                    <input type="text" id="input-codice-stanza" placeholder="Codice Stanza..." class="flex-1 bg-[#20232d] border-2 border-gray-600 rounded-xl p-3 text-center text-lg font-bold text-[#f5b91e] focus:border-[#f5b91e] outline-none text-white">
+                    <button onclick="generaMioCodice()" class="bg-[#1e50a0] hover:bg-blue-600 px-4 rounded-xl font-bold text-xs text-white transition">GENERA</button>
+                </div>
+                <div class="flex space-x-4">
+                    <button onclick="creaStanzaOnline()" class="flex-1 bg-[#0e4419] hover:bg-emerald-600 border-2 border-white py-3 rounded-xl font-bold text-white transition">CREA STANZA</button>
+                    <button onclick="unisciStanzaOnline()" class="flex-1 bg-[#1e50a0] hover:bg-blue-600 border-2 border-white py-3 rounded-xl font-bold text-white transition">UNISCITI</button>
+                </div>
+            </div>
+            <p id="stato-online-msg" class="text-[#f5b91e] text-center text-sm font-semibold h-6"></p>
+        </div>
+    </div>
+
+    <!-- 4. DECK BUILDER PROFESSIONALE -->
+    <div id="screen-deckbuilder" class="hidden flex flex-col h-full w-full p-4 bg-[#0c0c10]">
+        <div class="flex justify-between items-center mb-3">
+            <button onclick="salvaEDEsciDeckBuilder()" class="bg-[#16181e] border-2 border-white px-5 py-2 rounded-lg font-bold text-sm text-white hover:bg-gray-800 transition">&lt; SALVA &amp; MENU</button>
+            <h2 class="text-2xl font-bold text-[#f5b91e]">DECK BUILDER - MAIN DECK &amp; EXTRA DECK</h2>
+            <div class="w-32"></div>
+        </div>
+        <div class="flex flex-row h-[calc(100%-60px)] gap-4">
+            <!-- Archivio Carte -->
+            <div class="w-1/3 bg-[#16181e] border border-gray-700 rounded-xl p-4 flex flex-col">
+                <input type="text" id="barra-ricerca" oninput="filtraArchivioCarte()" placeholder="🔍 Clicca qui e digita per CERCARE..." class="bg-[#20232d] border-2 border-gray-600 rounded-lg p-2.5 mb-3 text-sm focus:border-[#f5b91e] outline-none text-white">
+                <div id="archivio-carte" class="grid grid-cols-4 gap-2 overflow-y-auto flex-grow pr-1"></div>
+            </div>
+            <!-- Mio Deck -->
+            <div class="w-2/3 flex flex-col gap-3">
+                <div class="h-2/3 bg-[#16181e] border border-gray-700 rounded-xl p-4 flex flex-col">
+                    <h3 id="titolo-main-deck" class="text-sm font-bold text-emerald-400 mb-2">Main Deck (0 Carte) - Clicca per rimuovere</h3>
+                    <div id="mio-main-deck" class="grid grid-cols-7 gap-2 overflow-y-auto flex-grow"></div>
+                </div>
+                <div class="h-1/3 bg-[#16181e] border border-gray-700 rounded-xl p-4 flex flex-col">
+                    <h3 id="titolo-extra-deck" class="text-sm font-bold text-purple-400 mb-2">Extra Deck / Fusioni (0 Carte)</h3>
+                    <div id="mio-extra-deck" class="flex gap-2 overflow-x-auto flex-grow items-center"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. PLANCIA DI GIOCO REGOLAMENTARE COMPLETA -->
+    <div id="screen-gioco" class="hidden flex h-full w-full table-bg relative">
+        
+        <!-- SIDEBAR E INFO DUEL -->
+        <div class="w-64 bg-[#16181e] border-r border-gray-800 p-4 flex flex-col justify-between z-10 shadow-2xl">
+            <div class="flex flex-col space-y-4">
+                <button onclick="mostraSchermata('menu')" class="bg-[#c82828] hover:bg-red-700 text-white py-2 rounded-lg font-bold text-xs transition">ESCI AL MENU</button>
+                <div class="bg-[#20232d] p-3 rounded-xl border border-gray-700 space-y-2">
+                    <p id="label-vs" class="text-[#f5b91e] font-bold text-sm truncate">VS: Avversario</p>
+                    <div class="flex justify-between items-center text-xs">
+                        <span id="label-lp-opp" class="text-red-400 font-bold">LP Opp: 8000</span>
+                        <div class="flex space-x-1">
+                            <button onclick="modificaLP('opp', -500)" class="bg-red-900 px-1 rounded text-[10px] text-white">-500</button>
+                            <button onclick="modificaLP('opp', 500)" class="bg-emerald-900 px-1 rounded text-[10px] text-white">+500</button>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center text-xs">
+                        <span id="label-lp-tu" class="text-emerald-400 font-bold">Tu LP: 8000</span>
+                        <div class="flex space-x-1">
+                            <button onclick="modificaLP('tu', -500)" class="bg-red-900 px-1 rounded text-[10px] text-white">-500</button>
+                            <button onclick="modificaLP('tu', 500)" class="bg-emerald-900 px-1 rounded text-[10px] text-white">+500</button>
+                        </div>
+                    </div>
+                    <p id="label-fase" class="text-gray-300 text-[11px] italic mt-1">Stato: Tuo Turno</p>
+                </div>
+                <button onclick="pescaCarta()" class="bg-[#f5b91e] hover:bg-amber-400 text-black py-2 rounded-lg font-bold text-xs transition">PESCA CARTA</button>
+                <button onclick="passaTurno()" class="bg-[#1e50a0] hover:bg-blue-600 text-white py-2 rounded-lg font-bold text-xs transition">PASSA TURNO</button>
+            </div>
+
+            <!-- Anteprima In Grandezza Naturale (Big View) -->
+            <div id="box-anteprima" class="w-full h-72 border-2 border-[#f5b91e] rounded-xl bg-black/80 flex items-center justify-center overflow-hidden p-1 shadow-inner">
+                <span class="text-gray-500 text-xs text-center p-2">Passa sopra una carta per l'anteprima</span>
+            </div>
+        </div>
+
+        <!-- TAVOLO DI GIOCO -->
+        <div class="flex-grow flex flex-col justify-between p-4 relative overflow-hidden">
+            
+            <!-- CAMPO AVVERSARIO -->
+            <div class="flex flex-col items-center space-y-3">
+                <!-- Magie / Trappole Opp & Field/GY -->
+                <div class="flex gap-3 items-center">
+                    <div id="opp-field" class="card-slot"><span class="zone-label">Campo</span></div>
+                    <div id="opp-st-0" class="card-slot"></div>
+                    <div id="opp-st-1" class="card-slot"></div>
+                    <div id="opp-st-2" class="card-slot"></div>
+                    <div id="opp-st-3" class="card-slot"></div>
+                    <div id="opp-st-4" class="card-slot"></div>
+                    <div id="opp-gy" class="card-slot"><span class="zone-label">Cimitero</span></div>
+                </div>
+                <!-- Mostri Opp & Extra/Deck/Banish -->
+                <div class="flex gap-3 items-center">
+                    <div id="opp-extra" class="card-slot bg-purple-950/40"><span class="zone-label">Extra</span></div>
+                    <div id="opp-m-0" class="card-slot"></div>
+                    <div id="opp-m-1" class="card-slot"></div>
+                    <div id="opp-m-2" class="card-slot"></div>
+                    <div id="opp-m-3" class="card-slot"></div>
+                    <div id="opp-m-4" class="card-slot"></div>
+                    <div id="opp-deck" class="card-slot bg-amber-950/40"><span class="zone-label">Deck</span></div>
+                </div>
+            </div>
+
+            <div class="w-full border-t border-white/10 my-2"></div>
+
+            <!-- CAMPO GIOCATORE -->
+            <div class="flex flex-col items-center space-y-3">
+                <!-- Mostri Tuoi & Extra/Deck -->
+                <div class="flex gap-3 items-center">
+                    <div id="tu-extra" class="card-slot bg-purple-950/40 cursor-pointer" onclick="apriPopupExtra()"><span class="zone-label">Extra</span></div>
+                    <div id="tu-m-0" onclick="azioneSlot('monster', 0)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-m-1" onclick="azioneSlot('monster', 1)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-m-2" onclick="azioneSlot('monster', 2)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-m-3" onclick="azioneSlot('monster', 3)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-m-4" onclick="azioneSlot('monster', 4)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-deck" class="card-slot bg-amber-950/40"><span class="zone-label">Deck</span></div>
+                </div>
+                <!-- Magie / Trappole Tue & Field/GY -->
+                <div class="flex gap-3 items-center">
+                    <div id="tu-field" onclick="azioneSlot('field', 0)" class="card-slot cursor-pointer"><span class="zone-label">Campo</span></div>
+                    <div id="tu-st-0" onclick="azioneSlot('st', 0)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-st-1" onclick="azioneSlot('st', 1)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-st-2" onclick="azioneSlot('st', 2)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-st-3" onclick="azioneSlot('st', 3)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-st-4" onclick="azioneSlot('st', 4)" class="card-slot cursor-pointer"></div>
+                    <div id="tu-gy" class="card-slot cursor-pointer"><span class="zone-label">Cimitero</span></div>
+                </div>
+            </div>
+
+            <!-- MANO GIOCATORE -->
+            <div class="flex flex-col items-center">
+                <p class="text-[11px] text-[#f5b91e] mb-1 font-bold tracking-wide">LA TUA MANO</p>
+                <div id="mano-giocatore" class="flex justify-center gap-3 h-28 items-center bg-black/60 rounded-2xl px-6 border border-gray-700 min-w-[600px] shadow-2xl"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DATABASE CARTE GOAT FORMAT COMPLETO ---
+        const listaCarteGoatBase = [
+            "Blue-Eyes White Dragon", "Dark Magician", "Pot of Greed", "Magician of Faith", 
+            "Heavy Storm", "Mystical Space Typhoon", "Sangan", "Breaker the Magical Warrior", 
+            "Delinquent Duo", "Graceful Charity", "Tribe-Infecting Virus", "Don Zaloog", 
+            "D.D. Assailant", "Mirror Force", "Jinzo", "Snatch Steal", "Premature Burial", 
+            "Call of the Haunted", "Torrential Tribute", "Ring of Destruction", "Scapegoat",
+            "Black Luster Soldier - Envoy of the Beginning", "Chaos Sorcerer", "Book of Moon",
+            "Sakuretsu Armor", "Asura Priest", "Airknight Parshath", "Exiled Force", "Blade Knight"
+        ];
+
+        const listaFusioniGoat = [
+            "Thousand-Eyes Restrict", "Dark Balter the Terrible", "Fiend Skull Dragon",
+            "Giltia the D. Knight", "Ryu Senshi", "Gatling Dragon", "King Dragun"
+        ];
+
+        let listaCarteGoat = [...listaCarteGoatBase];
+
+        // Scarica l'archivio storico completo tramite YGOPRODeck API
+        async function scaricaDbCompleto() {
+            try {
+                const res = await fetch("https://db.ygoprodeck.com/api/v7/cardinfo.php?startdate=2000-01-01&enddate=2005-08-25");
+                const json = await res.json();
+                if (json.data && json.data.length > 100) {
+                    listaCarteGoat = json.data.map(c => c.name);
+                    if (document.getElementById('screen-deckbuilder').classList.contains('hidden') === false) {
+                        aggiornaDeckBuilder();
+                    }
+                }
+            } catch (e) {
+                console.log("Uso database locale Goat Format.");
+            }
+        }
+        scaricaDbCompleto();
+
+        // --- PERSONAGGI CAMPAGNA STORICA ---
+        const personaggiCampagna = [
+            { nome: "Yugi Muto", mazzo: "Goat Control / Chaos", difficolta: "Media", colore: "bg-red-900" },
+            { nome: "Seto Kaiba", mazzo: "Drago Bianco Beatdown", difficolta: "Avanzata", colore: "bg-blue-900" },
+            { nome: "Joey Wheeler", mazzo: "Guerriero / Drago Nero", difficolta: "Normale", colore: "bg-amber-800" },
+            { nome: "Maximillion Pegasus", mazzo: "Mondo Toon", difficolta: "Difficile", colore: "bg-purple-900" },
+            { nome: "Marik Ishtar", mazzo: "Custode della Tomba", difficolta: "Avanzata", colore: "bg-[#a0781e]" },
+            { nome: "Mai Valentine", mazzo: "Arpia / Vento", difficolta: "Normale", colore: "bg-pink-800" },
+            { nome: "Bakura Ryou", mazzo: "Demone / Necrofear", difficolta: "Difficile", colore: "bg-slate-700" },
+            { nome: "Bandit Keith", mazzo: "Macchina / Barrel Dragon", difficolta: "Normale", colore: "bg-emerald-900" },
+            { nome: "Ishizu Ishtar", mazzo: "Fata / Controllo", difficolta: "Difficile", colore: "bg-yellow-700" },
+            { nome: "Rex Raptor", mazzo: "Dinosauro Beatdown", difficolta: "Facile", colore: "bg-orange-900" },
+            { nome: "Weevil Underwood", mazzo: "Insetto / Brucia-LP", difficolta: "Facile", colore: "bg-green-800" },
+            { nome: "Mako Tsunami", mazzo: "Acqua / Controllo", difficolta: "Normale", colore: "bg-cyan-900" }
+        ];
+
+        // --- STATO DEL GIOCO & DECK ---
+        let mazzoCorrente = JSON.parse(localStorage.getItem('goat_main_deck')) || [...listaCarteGoatBase.slice(0, 20)];
+        let extraDeckCorrente = JSON.parse(localStorage.getItem('goat_extra_deck')) || ["Thousand-Eyes Restrict", "Dark Balter the Terrible"];
+        
+        let manoTu = [], cimiteroTu = [], deckTu = [];
+        let campoTuMostri = [null, null, null, null, null];
+        let campoTuST = [null, null, null, null, null];
+        
+        let manoOpp = [], cimiteroOpp = [], deckOpp = [];
+        let campoOppMostri = [null, null, null, null, null];
+        let campoOppST = [null, null, null, null, null];
+
+        let lpTu = 8000, lpOpp = 8000;
+        let cartaSelezionataMano = null;
+        let avversarioSelezionato = "Yugi Muto";
+        let modalitaOnline = false;
+        let peer = null, conn = null;
+
+        function getCardImageUrl(nome) {
+            return `https://images.ygoprodeck.com/images/cards/${encodeURIComponent(nome)}.jpg`;
+        }
+
+        function mostraSchermata(id) {
+            ['menu', 'campagna', 'online', 'deckbuilder', 'gioco'].forEach(s => {
+                document.getElementById(`screen-${s}`).classList.add('hidden');
+            });
+            document.getElementById(`screen-${id}`).classList.remove('hidden');
+
+            if (id === 'campagna') renderCampagna();
+            if (id === 'deckbuilder') aggiornaDeckBuilder();
+        }
+
+        // Renderizza la Campagna
+        function renderCampagna() {
+            const container = document.getElementById('lista-campagna');
+            container.innerHTML = '';
+            personaggiCampagna.forEach(p => {
+                container.innerHTML += `
+                    <div class="bg-[#16181e] border border-[#f5b91e]/40 p-4 rounded-xl flex justify-between items-center hover:border-[#f5b91e] transition">
+                        <div class="flex items-center space-x-4">
+                            <div class="w-14 h-14 rounded-full ${p.colore} border-2 border-[#f5b91e] flex items-center justify-center font-bold text-white text-lg shadow-lg">
+                                ${p.nome.substring(0, 2)}
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-[#f5b91e]">${p.nome}</h3>
+                                <p class="text-xs text-gray-300">Mazzo Tematico: ${p.mazzo}</p>
+                                <p class="text-xs text-emerald-400 font-semibold">Difficoltà: ${p.difficolta}</p>
+                            </div>
+                        </div>
+                        <button onclick="sfidaPersonaggio('${p.nome}')" class="btn-gold px-6 py-2 rounded-lg text-sm">SFIDA</button>
+                    </div>
+                `;
+            });
+        }
+
+        function sfidaPersonaggio(nome) {
+            avversarioSelezionato = nome;
+            avviaGiocoLocale();
+        }
+
+        function avviaGiocoLocale() {
+            modalitaOnline = false;
+            resetPartita();
+            mostraSchermata('gioco');
+        }
+
+        function resetPartita() {
+            lpTu = 8000; lpOpp = 8000;
+            deckTu = [...mazzoCorrente];
+            deckOpp = [...listaCarteGoatBase.slice(0, 20)];
+            manoTu = []; manoOpp = []; cimiteroTu = []; cimiteroOpp = [];
+            campoTuMostri = [null, null, null, null, null];
+            campoTuST = [null, null, null, null, null];
+            campoOppMostri = [null, null, null, null, null];
+            campoOppST = [null, null, null, null, null];
+
+            // Pesca iniziale 5 carte
+            for (let i = 0; i < 5; i++) {
+                if (deckTu.length) manoTu.push(deckTu.pop());
+                if (deckOpp.length) manoOpp.push(deckOpp.pop());
+            }
+            aggiornaPlancia();
+        }
+
+        function pescaCarta() {
+            if (deckTu.length > 0) {
+                manoTu.push(deckTu.pop());
+                aggiornaPlancia();
+            }
+        }
+
+        function modificaLP(chi, quantita) {
+            if (chi === 'tu') lpTu = Math.max(0, lpTu + quantita);
+            else lpOpp = Math.max(0, lpOpp + quantita);
+            aggiornaPlancia();
+        }
+
+        function aggiornaPlancia() {
+            document.getElementById('label-vs').innerText = `VS: ${avversarioSelezionato}`;
+            document.getElementById('label-lp-tu').innerText = `Tu LP: ${lpTu}`;
+            document.getElementById('label-lp-opp').innerText = `LP Opp: ${lpOpp}`;
+            
+            document.getElementById('tu-deck').innerHTML = `<span class="zone-label">Deck (${deckTu.length})</span>`;
+            document.getElementById('tu-extra').innerHTML = `<span class="zone-label">Extra (${extraDeckCorrente.length})</span>`;
+            document.getElementById('tu-gy').innerHTML = `<span class="zone-label">GY (${cimiteroTu.length})</span>`;
+
+            // Render Mano Giocatore
+            const manoDiv = document.getElementById('mano-giocatore');
+            manoDiv.innerHTML = '';
+            manoTu.forEach((carta, idx) => {
+                manoDiv.innerHTML += `
+                    <img src="${getCardImageUrl(carta)}" class="h-24 w-16 object-cover rounded cursor-pointer transition ${cartaSelezionataMano === idx ? 'ring-4 ring-[#f5b91e] scale-105' : ''}" 
+                         onclick="selezionaCartaMano(${idx})" onmouseover="mostraAnteprima('${carta}')">
+                `;
+            });
+
+            // Render Slot Campo Tuo
+            for (let i = 0; i < 5; i++) {
+                renderSlot(`tu-m-${i}`, campoTuMostri[i]);
+                renderSlot(`tu-st-${i}`, campoTuST[i]);
+                renderSlot(`opp-m-${i}`, campoOppMostri[i]);
+                renderSlot(`opp-st-${i}`, campoOppST[i]);
+            }
+        }
+
+        function renderSlot(elementId, carta) {
+            const slot = document.getElementById(elementId);
+            if (carta) {
+                slot.innerHTML = `<img src="${getCardImageUrl(carta)}" class="card-img" onmouseover="mostraAnteprima('${carta}')">`;
+            } else {
+                if (!slot.querySelector('.zone-label')) slot.innerHTML = '';
+            }
+        }
+
+        function selezionaCartaMano(idx) {
+            cartaSelezionataMano = idx;
+            aggiornaPlancia();
+        }
+
+        function azioneSlot(zona, slotIdx) {
+            if (cartaSelezionataMano === null) return;
+            const carta = manoTu[cartaSelezionataMano];
+
+            if (zona === 'monster' && campoTuMostri[slotIdx] === null) {
+                campoTuMostri[slotIdx] = carta;
+            } else if (zona === 'st' && campoTuST[slotIdx] === null) {
+                campoTuST[slotIdx] = carta;
+            } else {
+                return;
+            }
+
+            manoTu.splice(cartaSelezionataMano, 1);
+            cartaSelezionataMano = null;
+            aggiornaPlancia();
+
+            if (conn && conn.open) {
+                conn.send({ tipo: 'GIOCA_CARTA', zona: zona, slot: slotIdx, carta: carta });
+            }
+        }
+
+        function mostraAnteprima(carta) {
+            document.getElementById('box-anteprima').innerHTML = `<img src="${getCardImageUrl(carta)}" class="h-full object-contain">`;
+        }
+
+        function passaTurno() {
+            document.getElementById('label-fase').innerText = "Turno Completato";
+        }
+
+        // --- DECK BUILDER LOGIC ---
+        function aggiornaDeckBuilder() {
+            filtraArchivioCarte();
+            renderMieiMazzi();
+        }
+
+        function filtraArchivioCarte() {
+            const filtro = document.getElementById('barra-ricerca').value.toLowerCase();
+            const archDiv = document.getElementById('archivio-carte');
+            archDiv.innerHTML = '';
+            
+            const unione = [...new Set([...listaCarteGoat, ...listaFusioniGoat])];
+            unione.filter(c => c.toLowerCase().includes(filtro)).forEach(c => {
+                archDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="aggiungiAlMazzo('${c}')" title="${c}">`;
+            });
+        }
+
+        function aggiungiAlMazzo(c) {
+            if (listaFusioniGoat.includes(c) || c.includes("Restrict") || c.includes("Balter")) {
+                if (extraDeckCorrente.length < 15) extraDeckCorrente.push(c);
+            } else {
+                if (mazzoCorrente.length < 60) mazzoCorrente.push(c);
+            }
+            renderMieiMazzi();
+        }
+
+        function renderMieiMazzi() {
+            document.getElementById('titolo-main-deck').innerText = `Main Deck (${mazzoCorrente.length} Carte) - Clicca per rimuovere`;
+            const mainDiv = document.getElementById('mio-main-deck');
+            mainDiv.innerHTML = '';
+            mazzoCorrente.forEach((c, idx) => {
+                mainDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="rimuoviDalMazzo('main', ${idx})">`;
+            });
+
+            document.getElementById('titolo-extra-deck').innerText = `Extra Deck / Fusioni (${extraDeckCorrente.length} Carte)`;
+            const extraDiv = document.getElementById('mio-extra-deck');
+            extraDiv.innerHTML = '';
+            extraDeckCorrente.forEach((c, idx) => {
+                extraDiv.innerHTML += `<img src="${getCardImageUrl(c)}" class="card-db" onclick="rimuoviDalMazzo('extra', ${idx})">`;
+            });
+        }
+
+        function rimuoviDalMazzo(tipo, idx) {
+            if (tipo === 'main') mazzoCorrente.splice(idx, 1);
+            else extraDeckCorrente.splice(idx, 1);
+            renderMieiMazzi();
+        }
+
+        function salvaEDEsciDeckBuilder() {
+            localStorage.setItem('goat_main_deck', JSON.stringify(mazzoCorrente));
+            localStorage.setItem('goat_extra_deck', JSON.stringify(extraDeckCorrente));
+            mostraSchermata('menu');
+        }
+
+        // --- ONLINE MULTIPLAYER P2P (PeerJS) ---
+        function generaMioCodice() {
+            document.getElementById('input-codice-stanza').value = "GOAT-" + Math.floor(1000 + Math.random() * 9000);
+        }
+
+        function inizializzaPeer(customId, callback) {
+            if (peer) peer.destroy();
+            peer = new Peer(customId);
+            peer.on('open', (id) => { if (callback) callback(id); });
+            peer.on('error', (err) => { document.getElementById('stato-online-msg').innerText = "Errore: " + err.type; });
+        }
+
+        function creaStanzaOnline() {
+            const codice = document.getElementById('input-codice-stanza').value.trim();
+            if (!codice) return;
+            inizializzaPeer(codice, (id) => {
+                document.getElementById('stato-online-msg').innerText = `Stanza [${id}] creata! In attesa dell'avversario...`;
+                peer.on('connection', (connection) => {
+                    conn = connection;
+                    configuraConnessione();
+                    avversarioSelezionato = "Amico Online";
+                    avviaGiocoLocale();
+                });
+            });
+        }
+
+        function unisciStanzaOnline() {
+            const codice = document.getElementById('input-codice-stanza').value.trim();
+            if (!codice) return;
+            inizializzaPeer(null, () => {
+                conn = peer.connect(codice);
+                configuraConnessione();
+                conn.on('open', () => {
+                    avversarioSelezionato = "Amico Online";
+                    avviaGiocoLocale();
+                });
+            });
+        }
+
+        function configuraConnessione() {
+            conn.on('data', (data) => {
+                if (data.tipo === 'GIOCA_CARTA') {
+                    if (data.zona === 'monster') campoOppMostri[data.slot] = data.carta;
+                    if (data.zona === 'st') campoOppST[data.slot] = data.carta;
+                    aggiornaPlancia();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
